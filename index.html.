@@ -22,8 +22,9 @@ header {
 h2 { margin: 0 0 6px; }
 #status { color: #b9d0df; font-size: 13px; }
 #map {
-  height: 72vh;
+  height: 600px;
   width: 100%;
+  display: block;
 }
 #info {
   padding: 12px;
