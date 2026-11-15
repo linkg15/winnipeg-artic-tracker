@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Winnipeg Artic Tracker</title>
+
+<link rel="stylesheet"
+href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background: #101820;
+  color: white;
+}
+header {
+  padding: 15px;
+  background: #172b3a;
+}
+h2 { margin: 0 0 6px; }
+#status { color: #b9d0df; font-size: 13px; }
+#map {
+  height: 72vh;
+  width: 100%;
+}
+#info {
+  padding: 12px;
+  font-size: 14px;
+}
+.bus-icon {
+  background: #1769aa;
+  border: 2px solid white;
+  border-radius: 50%;
+  color: white;
+  text-align: center;
+  font-weight: bold;
+  line-height: 30px;
+  width: 30px;
+  height: 30px;
+}
+</style>
+</head>
+
+<body>
+<header>
+  <h2>🚌 Winnipeg Artic Tracker</h2>
+  <div id="status">Waiting for vehicle data...</div>
+</header>
+
+<div id="map"></div>
+
+<div id="info">
+  <b id="count">0 articulated buses</b>
+  <p>Tap a bus marker for its fleet number and route.</p>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+<script>
+const map = L.map('map').setView([49.8951, -97.1384], 11);
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '&copy; OpenStreetMap contributors'
+}).addTo(map);
+
+const ARTIC_FLEET = new Set([
+  // Articulated fleet numbers will go here
+]);
+
+const FEED_URL = '';
+
+const markers = new Map();
+
+async function updateBuses() {
+  if (!FEED_URL || ARTIC_FLEET.size === 0) {
+    document.getElementById('status').textContent =
+      'Map ready — live data not connected yet.';
+    return;
+  }
+
+  try {
+    const response = await fetch(FEED_URL);
+    if (!response.ok) throw new Error('Feed unavailable');
+
+    const buses = await response.json();
+    const active = new Set();
+
+    buses.forEach(bus => {
+      const fleet = String(bus.fleet).trim();
+
+      if (!ARTIC_FLEET.has(fleet)) return;
+      if (!Number.isFinite(bus.lat) ||
+          !Number.isFinite(bus.lon)) return;
+
+      active.add(fleet);
+      const position = [bus.lat, bus.lon];
+
+      if (markers.has(fleet)) {
+        markers.get(fleet).setLatLng(position);
+      } else {
+        const icon = L.divIcon({
+          className: '',
+          html: '<div class="bus-icon">🚌</div>',
+          iconSize: [34, 34],
+          iconAnchor: [17, 17]
+        });
+
+        const marker = L.marker(position, {icon}).addTo(map);
+        markers.set(fleet, marker);
+      }
+
+      markers.get(fleet).bindPopup(
+        `<b>Bus ${fleet}</b><br>Route: ${bus.route || 'Unknown'}`
+      );
+    });
+
+    for (const [fleet, marker] of markers) {
+      if (!active.has(fleet)) {
+        map.removeLayer(marker);
+        markers.delete(fleet);
+      }
+    }
+
+    document.getElementById('count').textContent =
+      active.size + ' articulated buses';
+
+    document.getElementById('status').textContent =
+      'Last updated: ' + new Date().toLocaleTimeString();
+
+  } catch (error) {
+    document.getElementById('status').textContent =
+      'Could not retrieve live vehicle data.';
+  }
+}
+
+updateBuses();
+setInterval(updateBuses, 30000);
+</script>
+</body>
+</html>
