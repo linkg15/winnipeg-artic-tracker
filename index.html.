@@ -61,7 +61,6 @@ h2 { margin: 0 0 6px; }
 
 <script>
 const map = L.map('map').setView([49.8951, -97.1384], 11);
-
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '&copy; OpenStreetMap contributors'
 }).addTo(map);
